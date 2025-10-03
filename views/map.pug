@@ -18,6 +18,9 @@ html(lang="en" data-theme="light")
       }
   body
     #map
+    script.
+      window.vehiclesData = !{vehicles};
+      window.parkingZonesData = !{parkingZones};
     .card.w-96.bg-base-100.shadow-xl.absolute.top-4.right-4.z-10(
       x-data="journeyPlanner()"
       x-init="initMap()"

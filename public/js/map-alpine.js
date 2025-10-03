@@ -7,7 +7,7 @@ function journeyPlanner() {
     loading: false,
     error: null,
 
-    initMap() {
+    async initMap() {
       // Initialize the map
       this.map = new maplibregl.Map({
         container: 'map',
@@ -24,6 +24,112 @@ function journeyPlanner() {
 
       // Handle map clicks
       this.map.on('click', (e) => this.handleMapClick(e));
+
+      // Load and display vehicles and parking zones once map is ready
+      this.map.on('load', () => {
+        this.loadVehiclesAndParking();
+      });
+    },
+
+    loadVehiclesAndParking() {
+      try {
+        // Get data from window (injected by server)
+        const vehicles = window.vehiclesData || [];
+        const zones = window.parkingZonesData || [];
+
+        this.displayVehicles(vehicles);
+        this.displayParkingZones(zones);
+      } catch (error) {
+        console.error('Error loading vehicles/parking:', error);
+      }
+    },
+
+    displayVehicles(vehicles) {
+      // Add vehicle markers
+      vehicles.forEach((vehicle) => {
+        const el = document.createElement('div');
+        el.style.backgroundColor = '#3b82f6';
+        el.style.width = '10px';
+        el.style.height = '10px';
+        el.style.borderRadius = '50%';
+        el.style.border = '2px solid white';
+        el.style.boxShadow = '0 1px 3px rgba(0,0,0,0.3)';
+        el.style.cursor = 'pointer';
+
+        const popup = new maplibregl.Popup({ offset: 25 }).setHTML(`
+          <div style="font-size: 12px;">
+            <strong>🚗 ${vehicle.model.make} ${vehicle.model.name}</strong><br>
+            Plate: ${vehicle.plate}<br>
+            Battery: ${vehicle.autonomyPercentage}%<br>
+            Range: ${vehicle.displayAutonomy}km
+          </div>
+        `);
+
+        new maplibregl.Marker({ element: el })
+          .setLngLat([vehicle.locationLongitude, vehicle.locationLatitude])
+          .setPopup(popup)
+          .addTo(this.map);
+      });
+    },
+
+    displayParkingZones(zones) {
+      // Filter parking zones only
+      const parkingZones = zones.filter(zone => zone.geofencingType === 'parking');
+
+      // Add parking zones as polygons
+      parkingZones.forEach((zone, index) => {
+        const zoneId = `parking-zone-${index}`;
+
+        this.map.addSource(zoneId, {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            geometry: {
+              type: zone.geom.geometry.type,
+              coordinates: zone.geom.geometry.coordinates,
+            },
+          },
+        });
+
+        // Add fill layer
+        this.map.addLayer({
+          id: `${zoneId}-fill`,
+          type: 'fill',
+          source: zoneId,
+          paint: {
+            'fill-color': '#8b5cf6',
+            'fill-opacity': 0.2,
+          },
+        });
+
+        // Add outline layer
+        this.map.addLayer({
+          id: `${zoneId}-outline`,
+          type: 'line',
+          source: zoneId,
+          paint: {
+            'line-color': '#8b5cf6',
+            'line-width': 2,
+            'line-opacity': 0.6,
+          },
+        });
+
+        // Add popup on click
+        this.map.on('click', `${zoneId}-fill`, (e) => {
+          new maplibregl.Popup()
+            .setLngLat(e.lngLat)
+            .setHTML(`<div style="font-size: 12px;"><strong>🅿️ Parking Zone</strong></div>`)
+            .addTo(this.map);
+        });
+
+        // Change cursor on hover
+        this.map.on('mouseenter', `${zoneId}-fill`, () => {
+          this.map.getCanvas().style.cursor = 'pointer';
+        });
+        this.map.on('mouseleave', `${zoneId}-fill`, () => {
+          this.map.getCanvas().style.cursor = '';
+        });
+      });
     },
 
     handleMapClick(e) {
