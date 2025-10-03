@@ -9,6 +9,11 @@ Given a user journey (which can be several legs) this API will return a set of r
 * Drive car to parking closest to the destination
 * Walk to destination
 
+To create the routed journey we will use the following data sources:
+
+* the cars fetched from here: https://poppy.red/api/v3/cities/a88ea9d0-3d5e-4002-8bbf-775313a5973c/vehicles
+* the parking zones fetched from here: https://poppy.red/api/v3/geozones/62c4bd62-881c-473e-8a6b-fbedfd276739
+
 Input schema:
 
 ```yaml
@@ -38,6 +43,8 @@ journey:
 ## Price estimation
 
 Given a routed journey this API will return the cheapest estimated price. It will consider price differences between keeping a car booked between each leg or re-booking a different car from the same parking (assuming the new car is parked in the same location.)
+
+The pricing information is fetched from here: https://poppy.red/api/v3/geozones/62c4bd62-881c-473e-8a6b-fbedfd276739 
 
 Input schema:
 
