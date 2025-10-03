@@ -40,9 +40,9 @@ function journeyPlanner() {
 
         // Add to legs array
         this.legs.push({
-          startCoord: this.currentLeg.start[1], // latitude
+          startCoord: { lng: this.currentLeg.start[0], lat: this.currentLeg.start[1] },
           startTime: Date.now(),
-          endCoord: this.currentLeg.end[1], // latitude
+          endCoord: { lng: this.currentLeg.end[0], lat: this.currentLeg.end[1] },
           endTime: Date.now() + 1000,
         });
 
@@ -171,28 +171,62 @@ function journeyPlanner() {
     },
 
     displayJourneyResult(result) {
+      // Remove old planning lines (dotted lines between start/end)
+      this.legs.forEach((_, index) => {
+        const lineId = `line-${index}`;
+        if (this.map.getLayer(lineId)) {
+          this.map.removeLayer(lineId);
+        }
+        if (this.map.getSource(lineId)) {
+          this.map.removeSource(lineId);
+        }
+      });
+
       // Update legs with paths
       this.legs = result.legs;
 
-      // Draw the paths on the map
+      // Draw the routed paths on the map
       result.legs.forEach((leg, legIndex) => {
         leg.paths.forEach((path, pathIndex) => {
           this.drawPath(path, legIndex, pathIndex);
+
+          // Add waypoint markers for vehicles and parking
+          if (pathIndex === 0 && path.coords.length > 1) {
+            // Vehicle location (end of first walk)
+            const vehicleCoord = path.coords[1];
+            this.addMarker([vehicleCoord.lng, vehicleCoord.lat], '#fbbf24', '🚗 Vehicle');
+          }
+          if (pathIndex === 1 && path.coords.length > 1) {
+            // Parking location (end of drive)
+            const parkingCoord = path.coords[1];
+            this.addMarker([parkingCoord.lng, parkingCoord.lat], '#8b5cf6', '🅿️ Parking');
+          }
         });
       });
+
+      // Fit map to show all paths
+      this.fitMapToPaths(result.legs);
     },
 
     drawPath(path, legIndex, pathIndex) {
       const pathId = `path-${legIndex}-${pathIndex}`;
-      const color = path.mode === 'walk' ? '#10b981' : '#3b82f6';
+      const isWalk = path.mode === 'walk';
+      const color = isWalk ? '#10b981' : '#3b82f6';
+
+      // Convert coords objects to [lng, lat] arrays
+      const coordinates = path.coords.map(coord => [coord.lng, coord.lat]);
 
       this.map.addSource(pathId, {
         type: 'geojson',
         data: {
           type: 'Feature',
+          properties: {
+            mode: path.mode,
+            distance: path.distance,
+          },
           geometry: {
             type: 'LineString',
-            coordinates: path.coords.map((coord) => [coord, coord]),
+            coordinates: coordinates,
           },
         },
       });
@@ -201,13 +235,35 @@ function journeyPlanner() {
         id: pathId,
         type: 'line',
         source: pathId,
-        layout: {},
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round',
+        },
         paint: {
           'line-color': color,
-          'line-width': path.mode === 'walk' ? 2 : 4,
-          'line-dasharray': path.mode === 'walk' ? [2, 2] : [1, 0],
+          'line-width': isWalk ? 3 : 5,
+          'line-dasharray': isWalk ? [2, 2] : [1, 0],
+          'line-opacity': 0.8,
         },
       });
+    },
+
+    fitMapToPaths(legs) {
+      if (!legs || legs.length === 0) return;
+
+      const bounds = new maplibregl.LngLatBounds();
+
+      legs.forEach(leg => {
+        if (leg.paths) {
+          leg.paths.forEach(path => {
+            path.coords.forEach(coord => {
+              bounds.extend([coord.lng, coord.lat]);
+            });
+          });
+        }
+      });
+
+      this.map.fitBounds(bounds, { padding: 50 });
     },
   };
 }

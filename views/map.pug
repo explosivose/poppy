@@ -38,11 +38,15 @@ html(lang="en" data-theme="light")
                 .text-xs.space-y-1
                   div
                     | Start:
-                    span(x-text="leg.startCoord.toFixed(4)")
+                    span(x-text="leg.startCoord.lat.toFixed(4)")
+                    | °,
+                    span(x-text="leg.startCoord.lng.toFixed(4)")
                     | °
                   div
                     | End:
-                    span(x-text="leg.endCoord.toFixed(4)")
+                    span(x-text="leg.endCoord.lat.toFixed(4)")
+                    | °,
+                    span(x-text="leg.endCoord.lng.toFixed(4)")
                     | °
                   template(x-if="leg.paths")
                     .divider.my-1

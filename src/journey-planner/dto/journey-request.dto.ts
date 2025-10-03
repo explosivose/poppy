@@ -1,15 +1,25 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsNumber, ValidateNested } from 'class-validator';
+import { IsArray, IsNumber, ValidateNested, ArrayMinSize } from 'class-validator';
+
+export class CoordinateDto {
+  @IsNumber()
+  lng: number;
+
+  @IsNumber()
+  lat: number;
+}
 
 export class LegDto {
-  @IsNumber()
-  startCoord: number;
+  @ValidateNested()
+  @Type(() => CoordinateDto)
+  startCoord: CoordinateDto;
 
   @IsNumber()
   startTime: number;
 
-  @IsNumber()
-  endCoord: number;
+  @ValidateNested()
+  @Type(() => CoordinateDto)
+  endCoord: CoordinateDto;
 
   @IsNumber()
   endTime: number;
