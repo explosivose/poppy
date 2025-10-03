@@ -28,35 +28,30 @@ export class RoutingService {
     if (nearestVehicle) {
       paths.push({
         mode: 'walk',
-        coords: [leg.startCoord, nearestVehicle.location.latitude],
+        coords: [leg.startCoord, nearestVehicle.locationLatitude],
         distance: this.calculateDistance(
           leg.startCoord,
-          nearestVehicle.location.latitude,
+          nearestVehicle.locationLatitude,
         ),
       });
 
       // Path 2: Drive car to parking
       if (nearestParking) {
+        const parkingLat = nearestParking.geom.geometry.coordinates[0][0][0][1];
         paths.push({
           mode: 'drive',
-          coords: [
-            nearestVehicle.location.latitude,
-            nearestParking.geometry.coordinates[0][0][1],
-          ],
+          coords: [nearestVehicle.locationLatitude, parkingLat],
           distance: this.calculateDistance(
-            nearestVehicle.location.latitude,
-            nearestParking.geometry.coordinates[0][0][1],
+            nearestVehicle.locationLatitude,
+            parkingLat,
           ),
         });
 
         // Path 3: Walk to destination
         paths.push({
           mode: 'walk',
-          coords: [nearestParking.geometry.coordinates[0][0][1], leg.endCoord],
-          distance: this.calculateDistance(
-            nearestParking.geometry.coordinates[0][0][1],
-            leg.endCoord,
-          ),
+          coords: [parkingLat, leg.endCoord],
+          distance: this.calculateDistance(parkingLat, leg.endCoord),
         });
       }
     }
@@ -77,8 +72,8 @@ export class RoutingService {
     if (!vehicles || vehicles.length === 0) return null;
 
     return vehicles.reduce((nearest, vehicle) => {
-      const distance = Math.abs(vehicle.location.latitude - coord);
-      const nearestDistance = Math.abs(nearest.location.latitude - coord);
+      const distance = Math.abs(vehicle.locationLatitude - coord);
+      const nearestDistance = Math.abs(nearest.locationLatitude - coord);
       return distance < nearestDistance ? vehicle : nearest;
     });
   }
@@ -89,16 +84,22 @@ export class RoutingService {
   ): PoppyGeozone | null {
     if (!parkingZones || parkingZones.length === 0) return null;
 
-    return parkingZones
-      .filter((zone) => zone.properties?.parking)
-      .reduce((nearest: PoppyGeozone | null, zone) => {
-        if (!nearest) return zone;
-        const distance = Math.abs(zone.geometry.coordinates[0][0][1] - coord);
-        const nearestDistance = Math.abs(
-          nearest.geometry.coordinates[0][0][1] - coord,
-        );
-        return distance < nearestDistance ? zone : nearest;
-      }, null);
+    const parkingOnly = parkingZones.filter(
+      (zone) => zone.geofencingType === 'parking',
+    );
+
+    if (parkingOnly.length === 0) return null;
+
+    return parkingOnly.reduce((nearest: PoppyGeozone | null, zone) => {
+      if (!nearest) return zone;
+      const distance = Math.abs(
+        zone.geom.geometry.coordinates[0][0][0][1] - coord,
+      );
+      const nearestDistance = Math.abs(
+        nearest.geom.geometry.coordinates[0][0][0][1] - coord,
+      );
+      return distance < nearestDistance ? zone : nearest;
+    }, null);
   }
 
   private calculateDistance(coord1: number, coord2: number): number {
