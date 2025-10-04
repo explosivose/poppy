@@ -150,11 +150,14 @@ function journeyPlanner() {
         this.addMarker(coord, '#ef4444', 'End');
 
         // Add to legs array
+        const startTime = Date.now();
+        const endTime = startTime + (60 * 60 * 1000); // +1 hour
+
         this.legs.push({
           startCoord: { lng: this.currentLeg.start[0], lat: this.currentLeg.start[1] },
-          startTime: Date.now(),
+          startTime: startTime,
           endCoord: { lng: this.currentLeg.end[0], lat: this.currentLeg.end[1] },
-          endTime: Date.now() + 1000,
+          endTime: endTime,
         });
 
         // Draw line between start and end
