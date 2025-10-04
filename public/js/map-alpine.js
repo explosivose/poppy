@@ -11,6 +11,7 @@ function journeyPlanner() {
     tempStartTime: '',
     tempEndTime: '',
     totalPrice: 0,
+    vehicleMarkers: {},
 
     async initMap() {
       // Initialize the map
@@ -50,6 +51,9 @@ function journeyPlanner() {
     },
 
     displayVehicles(vehicles) {
+      // Store vehicle markers with their IDs for later updates
+      this.vehicleMarkers = {};
+
       // Add vehicle markers
       vehicles.forEach((vehicle) => {
         const el = document.createElement('div');
@@ -70,10 +74,16 @@ function journeyPlanner() {
           </div>
         `);
 
-        new maplibregl.Marker({ element: el })
+        const marker = new maplibregl.Marker({ element: el })
           .setLngLat([vehicle.locationLongitude, vehicle.locationLatitude])
           .setPopup(popup)
           .addTo(this.map);
+
+        // Store marker reference with vehicle data
+        this.vehicleMarkers[vehicle.uuid] = {
+          marker: marker,
+          vehicle: vehicle,
+        };
       });
     },
 
@@ -340,8 +350,8 @@ function journeyPlanner() {
           // Add waypoint markers for vehicles and parking
           if (pathIndex === 0 && path.coords.length > 1) {
             // Vehicle location (end of first walk)
-            const vehicleCoord = path.coords[1];
-            this.addMarker([vehicleCoord.lng, vehicleCoord.lat], '#fbbf24', '🚗 Vehicle');
+            const vehiclePickupCoord = path.coords[1];
+            this.addMarker([vehiclePickupCoord.lng, vehiclePickupCoord.lat], '#fbbf24', '🚗 Vehicle');
           }
           if (pathIndex === 1 && path.coords.length > 1) {
             // Parking location (end of drive)
@@ -350,6 +360,20 @@ function journeyPlanner() {
           }
         });
       });
+
+      // Update vehicle positions from backend response
+      if (result.updatedVehiclePositions) {
+        result.updatedVehiclePositions.forEach(({ vehicleId, location }) => {
+          if (this.vehicleMarkers[vehicleId]) {
+            const { marker } = this.vehicleMarkers[vehicleId];
+            marker.setLngLat([location.lng, location.lat]);
+
+            // Update vehicle data
+            this.vehicleMarkers[vehicleId].vehicle.locationLongitude = location.lng;
+            this.vehicleMarkers[vehicleId].vehicle.locationLatitude = location.lat;
+          }
+        });
+      }
 
       // Fit map to show all paths
       this.fitMapToPaths(result.legs);

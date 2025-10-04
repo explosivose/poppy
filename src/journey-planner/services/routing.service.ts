@@ -1,22 +1,38 @@
 import { Injectable } from '@nestjs/common';
 import { PoppyApiService } from './poppy-api.service';
 import { LegDto } from '../dto/journey-request.dto';
-import { RoutedLegDto, PathDto } from '../dto/journey-response.dto';
+import { RoutedLegDto, PathDto, VehicleUsageDto, CoordinateDto } from '../dto/journey-response.dto';
 import { PoppyVehicle, PoppyGeozone } from '../interfaces/poppy-api.interface';
 
 @Injectable()
 export class RoutingService {
   constructor(private readonly poppyApiService: PoppyApiService) {}
 
-  async routeLeg(leg: LegDto): Promise<RoutedLegDto> {
+  async routeLeg(
+    leg: LegDto,
+    updatedVehiclePositions: Map<string, CoordinateDto> = new Map(),
+  ): Promise<RoutedLegDto> {
     // Fetch available vehicles and parking zones
     const [vehicles, parkingZones] = await Promise.all([
       this.poppyApiService.getVehicles(),
       this.poppyApiService.getParkingZones(),
     ]);
 
+    // Apply updated positions to vehicles
+    const updatedVehicles = vehicles.map((vehicle) => {
+      const updatedPosition = updatedVehiclePositions.get(vehicle.uuid);
+      if (updatedPosition) {
+        return {
+          ...vehicle,
+          locationLongitude: updatedPosition.lng,
+          locationLatitude: updatedPosition.lat,
+        };
+      }
+      return vehicle;
+    });
+
     // Find nearest vehicle to start location
-    const nearestVehicle = this.findNearestVehicle(leg.startCoord, vehicles);
+    const nearestVehicle = this.findNearestVehicle(leg.startCoord, updatedVehicles);
 
     // Find nearest parking zone to destination
     const nearestParking = this.findNearestParking(leg.endCoord, parkingZones);
@@ -60,12 +76,29 @@ export class RoutingService {
       }
     }
 
+    // Create vehicle usage info if a vehicle was used
+    let vehicleUsage: VehicleUsageDto | undefined;
+    if (nearestVehicle && nearestParking && paths.length >= 2) {
+      const vehicleCoord = {
+        lng: nearestVehicle.locationLongitude,
+        lat: nearestVehicle.locationLatitude,
+      };
+      const parkingCoord = this.findClosestPointInZone(nearestParking, leg.endCoord);
+
+      vehicleUsage = {
+        vehicleId: nearestVehicle.uuid,
+        pickupLocation: vehicleCoord,
+        dropoffLocation: parkingCoord,
+      };
+    }
+
     return {
       startCoord: leg.startCoord,
       startTime: leg.startTime,
       endCoord: leg.endCoord,
       endTime: leg.endTime,
       paths,
+      vehicleUsage,
     };
   }
 
