@@ -10,6 +10,7 @@ function journeyPlanner() {
     editingLegIndex: null,
     tempStartTime: '',
     tempEndTime: '',
+    totalPrice: 0,
 
     async initMap() {
       // Initialize the map
@@ -273,10 +274,43 @@ function journeyPlanner() {
 
         const result = await response.json();
         this.displayJourneyResult(result);
+
+        // Get price estimation
+        await this.getPriceEstimation(result);
       } catch (err) {
         this.error = 'Error planning journey: ' + err.message;
       } finally {
         this.loading = false;
+      }
+    },
+
+    async getPriceEstimation(journey) {
+      try {
+        const response = await fetch('/price-estimation/estimate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ legs: journey.legs }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to get price estimation');
+        }
+
+        const priceData = await response.json();
+
+        // Add price data to legs
+        this.legs = journey.legs.map((leg, index) => ({
+          ...leg,
+          estimatedPrice: priceData.legs[index].estimatedPrice,
+          priceBreakdown: priceData.legs[index].priceBreakdown,
+        }));
+
+        // Store total price
+        this.totalPrice = priceData.estimatedPrice;
+      } catch (err) {
+        console.error('Error getting price estimation:', err);
       }
     },
 

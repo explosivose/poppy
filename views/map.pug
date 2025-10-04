@@ -72,6 +72,30 @@ html(lang="en" data-theme="light")
                           span.opacity-70
                             span(x-text="Math.round(path.distance)")
                             | m
+                  template(x-if="leg.estimatedPrice")
+                    .divider.my-1
+                  template(x-if="leg.estimatedPrice")
+                    .bg-success.bg-opacity-10.p-2.rounded.text-xs
+                      .font-semibold.text-success
+                        | 💰 €
+                        span(x-text="(leg.estimatedPrice / 100).toFixed(2)")
+                      div(class="mt-1 space-y-0.5 text-xs opacity-70")
+                        div(x-show="leg.priceBreakdown?.unlockFee")
+                          | 🔓 Unlock: €
+                          span(x-text="(leg.priceBreakdown.unlockFee / 100).toFixed(2)")
+                        div(x-show="leg.priceBreakdown?.bookUnitPrice")
+                          | 📅 Booking: €
+                          span(x-text="(leg.priceBreakdown.bookUnitPrice / 100).toFixed(2)")
+                        div(x-show="leg.priceBreakdown?.minutePrice")
+                          | ⏱️ Driving: €
+                          span(x-text="(leg.priceBreakdown.minutePrice / 100).toFixed(2)")
+                        div(x-show="leg.priceBreakdown?.kilometerPrice")
+                          | 📏 Distance: €
+                          span(x-text="(leg.priceBreakdown.kilometerPrice / 100).toFixed(2)")
+                        div(x-show="leg.priceBreakdown?.pauseUnitPrice")
+                          | ⏸️ Pause: €
+                          span(x-text="(leg.priceBreakdown.pauseUnitPrice / 100).toFixed(2)")
+
 
           template(x-if="currentLeg.start && !currentLeg.end")
             .alert.alert-warning.text-xs
@@ -82,6 +106,14 @@ html(lang="en" data-theme="light")
                   span(x-text="currentLeg.start[1].toFixed(4)")
                   | °
                 .italic.mt-1 Click on map to set end point
+
+        template(x-if="totalPrice > 0")
+          .alert.alert-success.text-sm
+            div
+              .font-bold Total Price
+              .text-lg
+                | €
+                span(x-text="(totalPrice / 100).toFixed(2)")
 
         .card-actions.flex-col.w-full
           button.btn.btn-primary.w-full(

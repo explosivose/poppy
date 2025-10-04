@@ -72,4 +72,14 @@ journey:
       bookUnitPrice: number
       pauseUnitPrice: number
       unlockFee: number
+      minutePrice: number
+      kilometerPrice: number
 ```
+
+### **Notes on units**
+
+- All prices are in thousandths VAT excluded per minute. So `"unlockFee":827` means 1€ VAT incl.
+- bookUnitPrice is the price per minute a user pays to hold their reservation before unlocking the car, the first 15 minutes are free
+- minutePrice is the price per minute a user pays as soon as the user unlocked a car
+- kilometerPrice is the price per kilometer once includedKilometers is exceeded
+- pauseUnitPrice is the price while the car is at a standstill and still booked for the user (locked in the street or at a standstill)
