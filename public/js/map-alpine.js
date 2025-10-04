@@ -6,6 +6,10 @@ function journeyPlanner() {
     markers: [],
     loading: false,
     error: null,
+    showTimeModal: false,
+    editingLegIndex: null,
+    tempStartTime: '',
+    tempEndTime: '',
 
     async initMap() {
       // Initialize the map
@@ -370,6 +374,50 @@ function journeyPlanner() {
       });
 
       this.map.fitBounds(bounds, { padding: 50 });
+    },
+
+    formatTime(timestamp) {
+      if (!timestamp) return '';
+      const date = new Date(timestamp);
+      return date.toLocaleString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    },
+
+    editLegTime(index) {
+      this.editingLegIndex = index;
+      const leg = this.legs[index];
+
+      // Convert timestamps to datetime-local format
+      if (leg.startTime) {
+        this.tempStartTime = new Date(leg.startTime).toISOString().slice(0, 16);
+      } else {
+        this.tempStartTime = new Date().toISOString().slice(0, 16);
+      }
+
+      if (leg.endTime) {
+        this.tempEndTime = new Date(leg.endTime).toISOString().slice(0, 16);
+      } else {
+        const endDate = new Date(leg.startTime || Date.now());
+        endDate.setHours(endDate.getHours() + 1);
+        this.tempEndTime = endDate.toISOString().slice(0, 16);
+      }
+
+      this.showTimeModal = true;
+    },
+
+    saveLegTime() {
+      if (this.editingLegIndex !== null) {
+        const leg = this.legs[this.editingLegIndex];
+        leg.startTime = new Date(this.tempStartTime).getTime();
+        leg.endTime = new Date(this.tempEndTime).getTime();
+        this.showTimeModal = false;
+        this.editingLegIndex = null;
+      }
     },
   };
 }

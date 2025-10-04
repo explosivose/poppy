@@ -18,6 +18,7 @@ html(lang="en" data-theme="light")
       }
   body
     #map
+    script(src="/js/map-alpine.js")
     script.
       window.vehiclesData = !{vehicles};
       window.parkingZonesData = !{parkingZones};
@@ -35,9 +36,12 @@ html(lang="en" data-theme="light")
           template(x-for="(leg, index) in legs" :key="index")
             .card.bg-base-200.shadow-sm
               .card-body.p-3
-                .font-semibold.text-sm
-                  | Leg
-                  span(x-text="index + 1")
+                .flex.justify-between.items-start.mb-2
+                  .font-semibold.text-sm
+                    | Leg
+                    span(x-text="index + 1")
+                  button.btn.btn-xs.btn-ghost(@click="editLegTime(index)")
+                    | ⏱️ Edit
                 .text-xs.space-y-1
                   div
                     | Start:
@@ -45,12 +49,18 @@ html(lang="en" data-theme="light")
                     | °,
                     span(x-text="leg.startCoord.lng.toFixed(4)")
                     | °
+                  div.text-info(x-show="leg.startTime")
+                    | 🕒
+                    span(x-text="formatTime(leg.startTime)")
                   div
                     | End:
                     span(x-text="leg.endCoord.lat.toFixed(4)")
                     | °,
                     span(x-text="leg.endCoord.lng.toFixed(4)")
                     | °
+                  div.text-info(x-show="leg.endTime")
+                    | 🕒
+                    span(x-text="formatTime(leg.endTime)")
                   template(x-if="leg.paths")
                     .divider.my-1
                   template(x-if="leg.paths")
@@ -87,4 +97,24 @@ html(lang="en" data-theme="light")
           .alert.alert-error.text-sm
             span(x-text="error")
 
-    script(src="/js/map-alpine.js")
+      dialog.modal(:class="{'modal-open': showTimeModal}" @click.self="showTimeModal = false")
+        .modal-box
+          h3.font-bold.text-lg Edit Leg Times
+          .py-4.space-y-4(x-show="editingLegIndex !== null")
+            .form-control
+              label.label
+                span.label-text Start Time
+              input.input.input-bordered(
+                type="datetime-local"
+                x-model="tempStartTime"
+              )
+            .form-control
+              label.label
+                span.label-text End Time
+              input.input.input-bordered(
+                type="datetime-local"
+                x-model="tempEndTime"
+              )
+          .modal-action
+            button.btn(@click="showTimeModal = false") Cancel
+            button.btn.btn-primary(@click="saveLegTime()") Save
