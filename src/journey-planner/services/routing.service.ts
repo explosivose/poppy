@@ -39,9 +39,11 @@ export class RoutingService {
 
       // Path 2: Drive car to parking
       if (nearestParking) {
-        const parkingLng = nearestParking.geom.geometry.coordinates[0][0][0][0];
-        const parkingLat = nearestParking.geom.geometry.coordinates[0][0][0][1];
-        const parkingCoord = { lng: parkingLng, lat: parkingLat };
+        // Find the closest point within the parking zone to the destination
+        const parkingCoord = this.findClosestPointInZone(
+          nearestParking,
+          leg.endCoord,
+        );
 
         paths.push({
           mode: 'drive',
@@ -115,6 +117,33 @@ export class RoutingService {
       });
       return distance < nearestDistance ? zone : nearest;
     }, null);
+  }
+
+  private findClosestPointInZone(
+    zone: PoppyGeozone,
+    targetCoord: { lng: number; lat: number },
+  ): { lng: number; lat: number } {
+    let closestPoint = { lng: 0, lat: 0 };
+    let minDistance = Infinity;
+
+    // Iterate through all polygons in the MultiPolygon
+    zone.geom.geometry.coordinates.forEach((polygon) => {
+      // Iterate through all rings in the polygon (first ring is outer boundary)
+      polygon.forEach((ring) => {
+        // Check each coordinate in the ring
+        ring.forEach((coord) => {
+          const point = { lng: coord[0], lat: coord[1] };
+          const distance = this.calculateDistance(point, targetCoord);
+
+          if (distance < minDistance) {
+            minDistance = distance;
+            closestPoint = point;
+          }
+        });
+      });
+    });
+
+    return closestPoint;
   }
 
   private calculateDistance(
