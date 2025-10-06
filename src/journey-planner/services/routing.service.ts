@@ -55,11 +55,24 @@ export class RoutingService {
 
       // Path 2: Drive car to parking
       if (nearestParking) {
-        // Find the closest point within the parking zone to the destination
-        const parkingCoord = this.findClosestPointInZone(
-          nearestParking,
+        // Check if destination is inside the parking zone
+        const isDestinationInZone = this.isPointInPolygon(
           leg.endCoord,
+          nearestParking,
         );
+
+        let parkingCoord: { lng: number; lat: number };
+
+        if (isDestinationInZone) {
+          // Drive directly to destination if it's inside the parking zone
+          parkingCoord = leg.endCoord;
+        } else {
+          // Find the closest point on the edge of the parking zone to the destination
+          parkingCoord = this.findClosestPointInZone(
+            nearestParking,
+            leg.endCoord,
+          );
+        }
 
         paths.push({
           mode: 'drive',
@@ -67,12 +80,14 @@ export class RoutingService {
           distance: this.calculateDistance(vehicleCoord, parkingCoord),
         });
 
-        // Path 3: Walk to destination
-        paths.push({
-          mode: 'walk',
-          coords: [parkingCoord, leg.endCoord],
-          distance: this.calculateDistance(parkingCoord, leg.endCoord),
-        });
+        // Path 3: Walk to destination (only if parking point != destination)
+        if (!isDestinationInZone) {
+          paths.push({
+            mode: 'walk',
+            coords: [parkingCoord, leg.endCoord],
+            distance: this.calculateDistance(parkingCoord, leg.endCoord),
+          });
+        }
       }
     }
 
@@ -133,23 +148,81 @@ export class RoutingService {
 
     if (parkingOnly.length === 0) return null;
 
-    return parkingOnly.reduce((nearest: PoppyGeozone | null, zone) => {
-      if (!nearest) return zone;
-      const zoneLng = zone.geom.geometry.coordinates[0][0][0][0];
-      const zoneLat = zone.geom.geometry.coordinates[0][0][0][1];
-      const nearestLng = nearest.geom.geometry.coordinates[0][0][0][0];
-      const nearestLat = nearest.geom.geometry.coordinates[0][0][0][1];
+    // Find the zone with the closest point to the destination
+    let nearestZone: PoppyGeozone | null = null;
+    let minDistance = Infinity;
 
-      const distance = this.calculateDistance(coord, {
-        lng: zoneLng,
-        lat: zoneLat,
+    parkingOnly.forEach((zone) => {
+      // Find the closest point in this zone to the destination
+      let closestDistanceInZone = Infinity;
+
+      zone.geom.geometry.coordinates.forEach((polygon) => {
+        polygon.forEach((ring) => {
+          ring.forEach((coordArray) => {
+            const point = { lng: coordArray[0], lat: coordArray[1] };
+            const distance = this.calculateDistance(point, coord);
+
+            if (distance < closestDistanceInZone) {
+              closestDistanceInZone = distance;
+            }
+          });
+        });
       });
-      const nearestDistance = this.calculateDistance(coord, {
-        lng: nearestLng,
-        lat: nearestLat,
-      });
-      return distance < nearestDistance ? zone : nearest;
-    }, null);
+
+      // If this zone has a closer point than any previous zone, select it
+      if (closestDistanceInZone < minDistance) {
+        minDistance = closestDistanceInZone;
+        nearestZone = zone;
+      }
+    });
+
+    return nearestZone;
+  }
+
+  private isPointInPolygon(
+    point: { lng: number; lat: number },
+    zone: PoppyGeozone,
+  ): boolean {
+    // Check if point is inside any polygon in the MultiPolygon
+    for (const polygon of zone.geom.geometry.coordinates) {
+      // Only check the outer ring (first ring) for containment
+      const outerRing = polygon[0];
+      if (this.pointInRing(point, outerRing)) {
+        // Check if it's in any holes (inner rings)
+        let inHole = false;
+        for (let i = 1; i < polygon.length; i++) {
+          if (this.pointInRing(point, polygon[i])) {
+            inHole = true;
+            break;
+          }
+        }
+        if (!inHole) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private pointInRing(
+    point: { lng: number; lat: number },
+    ring: number[][],
+  ): boolean {
+    // Ray-casting algorithm
+    let inside = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const xi = ring[i][0];
+      const yi = ring[i][1];
+      const xj = ring[j][0];
+      const yj = ring[j][1];
+
+      const intersect =
+        yi > point.lat !== yj > point.lat &&
+        point.lng < ((xj - xi) * (point.lat - yi)) / (yj - yi) + xi;
+
+      if (intersect) inside = !inside;
+    }
+    return inside;
   }
 
   private findClosestPointInZone(
