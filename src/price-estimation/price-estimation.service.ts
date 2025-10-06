@@ -19,7 +19,6 @@ export class PriceEstimationService {
     const pricingData = await this.poppyApiService.getPricing();
 
     const pricing = pricingData.pricingPerKilometer;
-    console.log(pricingData);
 
     const pricedLegs: PricedLegDto[] = [];
     let totalPrice = 0;
@@ -55,7 +54,7 @@ export class PriceEstimationService {
     let legPrice = 0;
 
     // Add unlock fee (once per leg when picking up a car)
-    const hasDrive = leg.paths?.some(path => path.mode === 'drive');
+    const hasDrive = leg.paths?.some((path) => path.mode === 'drive');
     const unlockFee = hasDrive ? pricing.unlockFee : 0;
     legPrice += unlockFee;
 
