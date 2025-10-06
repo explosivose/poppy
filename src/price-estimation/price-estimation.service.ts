@@ -18,8 +18,41 @@ export class PriceEstimationService {
     // Fetch pricing info from API
     const pricingData = await this.poppyApiService.getPricing();
 
-    const pricing = pricingData.pricingPerKilometer;
+    // Calculate prices for both pricing models
+    const perKilometerResult = this.calculatePriceWithModel(
+      legs,
+      pricingData.pricingPerKilometer,
+    );
+    const perMinuteResult = this.calculatePriceWithModel(
+      legs,
+      pricingData.pricingPerMinute,
+    );
 
+    // Determine cheapest option
+    const cheapestOption =
+      perKilometerResult.totalPrice <= perMinuteResult.totalPrice
+        ? 'perKilometer'
+        : 'perMinute';
+
+    return {
+      perKilometer: {
+        pricingType: 'perKilometer',
+        estimatedPrice: perKilometerResult.totalPrice,
+        legs: perKilometerResult.legs,
+      },
+      perMinute: {
+        pricingType: 'perMinute',
+        estimatedPrice: perMinuteResult.totalPrice,
+        legs: perMinuteResult.legs,
+      },
+      cheapestOption,
+    };
+  }
+
+  private calculatePriceWithModel(
+    legs: RoutedLegDto[],
+    pricing: PricingInfo,
+  ): { totalPrice: number; legs: PricedLegDto[] } {
     const pricedLegs: PricedLegDto[] = [];
     let totalPrice = 0;
 
@@ -40,10 +73,7 @@ export class PriceEstimationService {
       totalPrice += legPrice.estimatedPrice;
     }
 
-    return {
-      estimatedPrice: totalPrice,
-      legs: pricedLegs,
-    };
+    return { totalPrice, legs: pricedLegs };
   }
 
   private calculateLegPrice(

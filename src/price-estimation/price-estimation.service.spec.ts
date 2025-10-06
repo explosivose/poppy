@@ -135,11 +135,11 @@ describe('PriceEstimationService', () => {
 
       // Expected: 9.746 km * 1017 = 9911.82 thousandths = ~9.91€
       const expectedKmPrice = Math.round(9.746 * 1017);
-      expect(result.legs[0].priceBreakdown.kilometerPrice).toBe(expectedKmPrice);
+      expect(result.perKilometer.legs[0].priceBreakdown.kilometerPrice).toBe(expectedKmPrice);
 
       // Verify it's in the correct range (around 9911, not 99110)
-      expect(result.legs[0].priceBreakdown.kilometerPrice).toBeGreaterThan(9000);
-      expect(result.legs[0].priceBreakdown.kilometerPrice).toBeLessThan(11000);
+      expect(result.perKilometer.legs[0].priceBreakdown.kilometerPrice).toBeGreaterThan(9000);
+      expect(result.perKilometer.legs[0].priceBreakdown.kilometerPrice).toBeLessThan(11000);
     });
 
     it('should convert prices from thousandths correctly', async () => {
@@ -168,10 +168,10 @@ describe('PriceEstimationService', () => {
       const result = await service.estimatePrice([leg]);
 
       // 1 km * 1017 = 1017 thousandths = 1.017€
-      expect(result.legs[0].priceBreakdown.kilometerPrice).toBe(1017);
+      expect(result.perKilometer.legs[0].priceBreakdown.kilometerPrice).toBe(1017);
 
       // Unlock fee should be 827 thousandths = 0.827€
-      expect(result.legs[0].priceBreakdown.unlockFee).toBe(827);
+      expect(result.perKilometer.legs[0].priceBreakdown.unlockFee).toBe(827);
     });
   });
 
@@ -201,8 +201,9 @@ describe('PriceEstimationService', () => {
 
       const result = await service.estimatePrice([leg]);
 
-      // No pause for single leg
-      expect(result.legs[0].priceBreakdown.pauseUnitPrice).toBe(0);
+      // No pause for single leg (check both pricing models)
+      expect(result.perKilometer.legs[0].priceBreakdown.pauseUnitPrice).toBe(0);
+      expect(result.perMinute.legs[0].priceBreakdown.pauseUnitPrice).toBe(0);
     });
 
     it('should calculate pause price between legs with same vehicle', async () => {
@@ -260,10 +261,12 @@ describe('PriceEstimationService', () => {
 
       // First leg should have pause price for 30 minutes
       // 30 minutes * 248 (pauseUnitPrice) = 7440 thousandths
-      expect(result.legs[0].priceBreakdown.pauseUnitPrice).toBe(7440);
+      expect(result.perKilometer.legs[0].priceBreakdown.pauseUnitPrice).toBe(7440);
+      expect(result.perMinute.legs[0].priceBreakdown.pauseUnitPrice).toBe(7440);
 
       // Second leg should have no pause (it's the last leg)
-      expect(result.legs[1].priceBreakdown.pauseUnitPrice).toBe(0);
+      expect(result.perKilometer.legs[1].priceBreakdown.pauseUnitPrice).toBe(0);
+      expect(result.perMinute.legs[1].priceBreakdown.pauseUnitPrice).toBe(0);
     });
 
     it('should not calculate pause price between legs with different vehicles', async () => {
@@ -320,8 +323,8 @@ describe('PriceEstimationService', () => {
       const result = await service.estimatePrice(legs);
 
       // No pause for either leg (different vehicles)
-      expect(result.legs[0].priceBreakdown.pauseUnitPrice).toBe(0);
-      expect(result.legs[1].priceBreakdown.pauseUnitPrice).toBe(0);
+      expect(result.perKilometer.legs[0].priceBreakdown.pauseUnitPrice).toBe(0);
+      expect(result.perKilometer.legs[1].priceBreakdown.pauseUnitPrice).toBe(0);
     });
   });
 
@@ -354,8 +357,9 @@ describe('PriceEstimationService', () => {
 
       const result = await service.estimatePrice([leg]);
 
-      // First 15 minutes are free
-      expect(result.legs[0].priceBreakdown.bookUnitPrice).toBe(0);
+      // First 15 minutes are free (both pricing models)
+      expect(result.perKilometer.legs[0].priceBreakdown.bookUnitPrice).toBe(0);
+      expect(result.perMinute.legs[0].priceBreakdown.bookUnitPrice).toBe(0);
     });
 
     it('should charge booking price after 15 minutes', async () => {
@@ -386,8 +390,9 @@ describe('PriceEstimationService', () => {
 
       const result = await service.estimatePrice([leg]);
 
-      // 25 - 15 = 10 minutes * 27 (bookUnitPrice) = 270 thousandths
-      expect(result.legs[0].priceBreakdown.bookUnitPrice).toBe(270);
+      // 25 - 15 = 10 minutes * 27 (bookUnitPrice) = 270 thousandths (both models)
+      expect(result.perKilometer.legs[0].priceBreakdown.bookUnitPrice).toBe(270);
+      expect(result.perMinute.legs[0].priceBreakdown.bookUnitPrice).toBe(270);
     });
   });
 });

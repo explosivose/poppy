@@ -107,13 +107,30 @@ html(lang="en" data-theme="light")
                   | °
                 .italic.mt-1 Click on map to set end point
 
-        template(x-if="totalPrice > 0")
-          .alert.alert-success.text-sm
-            div
-              .font-bold Total Price
-              .text-lg
-                | €
-                span(x-text="(totalPrice / 1000).toFixed(2)")
+        template(x-if="priceOptions")
+          .space-y-2
+            .alert.text-sm(
+              :class="priceOptions.cheapestOption === 'perKilometer' ? 'alert-success' : 'alert-info'"
+            )
+              div
+                .flex.items-center.gap-2
+                  .font-bold Per Kilometer Pricing
+                  template(x-if="priceOptions.cheapestOption === 'perKilometer'")
+                    .badge.badge-success.badge-sm Cheapest
+                .text-lg
+                  | €
+                  span(x-text="(priceOptions.perKilometer.estimatedPrice / 1000).toFixed(2)")
+            .alert.text-sm(
+              :class="priceOptions.cheapestOption === 'perMinute' ? 'alert-success' : 'alert-info'"
+            )
+              div
+                .flex.items-center.gap-2
+                  .font-bold Per Minute Pricing
+                  template(x-if="priceOptions.cheapestOption === 'perMinute'")
+                    .badge.badge-success.badge-sm Cheapest
+                .text-lg
+                  | €
+                  span(x-text="(priceOptions.perMinute.estimatedPrice / 1000).toFixed(2)")
 
         .card-actions.flex-col.w-full
           button.btn.btn-primary.w-full(

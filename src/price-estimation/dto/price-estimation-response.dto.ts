@@ -11,7 +11,14 @@ export class PricedLegDto {
   priceBreakdown: PriceBreakdownDto;
 }
 
-export class PriceEstimationResponseDto {
+export class PricingOptionDto {
+  pricingType: 'perKilometer' | 'perMinute';
   estimatedPrice: number;
   legs: PricedLegDto[];
+}
+
+export class PriceEstimationResponseDto {
+  perKilometer: PricingOptionDto;
+  perMinute: PricingOptionDto;
+  cheapestOption: 'perKilometer' | 'perMinute';
 }

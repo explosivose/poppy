@@ -10,7 +10,7 @@ function journeyPlanner() {
     editingLegIndex: null,
     tempStartTime: '',
     tempEndTime: '',
-    totalPrice: 0,
+    priceOptions: null, // Will store both pricing options
     vehicleMarkers: {},
 
     async initMap() {
@@ -313,15 +313,18 @@ function journeyPlanner() {
 
         const priceData = await response.json();
 
-        // Add price data to legs
+        // Store both pricing options
+        this.priceOptions = priceData;
+
+        // Use the cheapest option for leg display
+        const cheapestLegs = priceData[priceData.cheapestOption].legs;
+
+        // Add price data to legs using cheapest option
         this.legs = journey.legs.map((leg, index) => ({
           ...leg,
-          estimatedPrice: priceData.legs[index].estimatedPrice,
-          priceBreakdown: priceData.legs[index].priceBreakdown,
+          estimatedPrice: cheapestLegs[index].estimatedPrice,
+          priceBreakdown: cheapestLegs[index].priceBreakdown,
         }));
-
-        // Store total price
-        this.totalPrice = priceData.estimatedPrice;
       } catch (err) {
         console.error('Error getting price estimation:', err);
       }
