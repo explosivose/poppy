@@ -24,8 +24,19 @@ export class PriceEstimationService {
     const pricedLegs: PricedLegDto[] = [];
     let totalPrice = 0;
 
-    for (const leg of legs) {
-      const legPrice = this.calculateLegPrice(leg, pricing);
+    for (let i = 0; i < legs.length; i++) {
+      const leg = legs[i];
+      const nextLeg = i < legs.length - 1 ? legs[i + 1] : null;
+
+      // Calculate pause time if next leg uses the same vehicle
+      let pauseMinutes = 0;
+      if (nextLeg && leg.vehicleUsage && nextLeg.vehicleUsage) {
+        if (leg.vehicleUsage.vehicleId === nextLeg.vehicleUsage.vehicleId) {
+          pauseMinutes = (nextLeg.startTime - leg.endTime) / 60000; // convert ms to minutes
+        }
+      }
+
+      const legPrice = this.calculateLegPrice(leg, pricing, pauseMinutes);
       pricedLegs.push(legPrice);
       totalPrice += legPrice.estimatedPrice;
     }
@@ -39,6 +50,7 @@ export class PriceEstimationService {
   private calculateLegPrice(
     leg: RoutedLegDto,
     pricing: PricingInfo,
+    pauseMinutes: number = 0,
   ): PricedLegDto {
     let legPrice = 0;
 
@@ -70,8 +82,7 @@ export class PriceEstimationService {
     const excessKm = Math.max(0, totalDriveKm - pricing.includedKilometers);
     const kilometerPriceTotal = excessKm * pricing.kilometerPrice;
 
-    // Pause price (time when car is locked but still reserved)
-    const pauseMinutes = Math.max(0, durationMinutes - drivingMinutes - 15);
+    // Pause price (time between this leg ending and next leg starting with same vehicle)
     const pausePriceTotal = pauseMinutes * pricing.pauseUnitPrice;
 
     legPrice +=
