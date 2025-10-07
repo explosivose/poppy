@@ -1,0 +1,6 @@
+* change vehicle savings: if the pauseUnitPrice exceeds the bookUnitPrice and there is a car within 15 minutes walk
+
+nice to haves
+* detailed routing
+* detailed map tiles
+* refetch vehicle locations appropriately
