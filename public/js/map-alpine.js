@@ -159,9 +159,18 @@ function journeyPlanner() {
         this.currentLeg.end = coord;
         this.addMarker(coord, '#ef4444', 'End');
 
-        // Add to legs array
-        const startTime = Date.now();
-        const endTime = startTime + (60 * 60 * 1000); // +1 hour
+        // Calculate times based on previous leg
+        let startTime, endTime;
+        if (this.legs.length > 0) {
+          // Start after the previous leg ends
+          const previousLeg = this.legs[this.legs.length - 1];
+          startTime = previousLeg.endTime + (30 * 60 * 1000); // +30 min buffer
+          endTime = startTime + (60 * 60 * 1000); // +1 hour from start
+        } else {
+          // First leg starts now
+          startTime = Date.now();
+          endTime = startTime + (60 * 60 * 1000); // +1 hour
+        }
 
         this.legs.push({
           startCoord: { lng: this.currentLeg.start[0], lat: this.currentLeg.start[1] },
@@ -286,15 +295,51 @@ function journeyPlanner() {
         }
 
         const result = await response.json();
+
+        // Update leg times based on actual route distances
+        this.updateLegTimesFromRoute(result);
+
         this.displayJourneyResult(result);
 
-        // Get price estimation
+        // Get price estimation with updated times
         await this.getPriceEstimation(result);
       } catch (err) {
         this.error = 'Error planning journey: ' + err.message;
       } finally {
         this.loading = false;
       }
+    },
+
+    updateLegTimesFromRoute(journey) {
+      const AVERAGE_WALK_SPEED = 5; // km/h
+      const AVERAGE_DRIVE_SPEED = 30; // km/h
+      const BUFFER_TIME = 30 * 60 * 1000; // 30 min buffer between legs
+
+      let currentTime = this.legs[0].startTime; // Start from first leg's original start time
+
+      journey.legs.forEach((routedLeg, index) => {
+        // Calculate total time for this leg based on path distances
+        let legDurationMs = 0;
+
+        routedLeg.paths.forEach(path => {
+          const distanceKm = path.distance / 1000; // convert meters to km
+          const speedKmh = path.mode === 'walk' ? AVERAGE_WALK_SPEED : AVERAGE_DRIVE_SPEED;
+          const durationHours = distanceKm / speedKmh;
+          const durationMs = durationHours * 60 * 60 * 1000; // convert to milliseconds
+          legDurationMs += durationMs;
+        });
+
+        // Update the leg times
+        this.legs[index].startTime = currentTime;
+        this.legs[index].endTime = currentTime + legDurationMs;
+
+        // Update route leg times
+        routedLeg.startTime = currentTime;
+        routedLeg.endTime = currentTime + legDurationMs;
+
+        // Next leg starts after this one ends plus buffer time
+        currentTime = currentTime + legDurationMs + BUFFER_TIME;
+      });
     },
 
     async getPriceEstimation(journey) {
