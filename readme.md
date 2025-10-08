@@ -1,6 +1,16 @@
 
 # Poppy journey planner and price estimation
 
+You can start the project locally like this:
+```
+pnpm install
+pnpm start:dev
+```
+
+Then open http://localhost:3000/map in your browser.
+
+For discussion and background on this project see [this page](./discussion.md).
+
 ## Journey planner
 
 Given a user journey (which can be several legs) this API will return a set of routed legs. Each leg will generally follow the format:
